@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+@theme {
+  --color-accent: #22d3ee;
+  --color-up: #7dd3a8;
+  --color-warn: #e5b567;
+  --color-danger: #f2757f;
+  --font-mono: "Cascadia Mono", "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --font-sans: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  color: #e7e9ec;
+  user-select: none;
+  cursor: default;
+}
+
+/* Near-black shell. Frosted, minimal, one faint cool wash. */
+.app-shell {
+  height: 100vh;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background:
+    radial-gradient(900px 500px at 12% -8%, rgba(34, 211, 238, 0.035), transparent 55%),
+    #030405;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.022);
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  border-radius: 14px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 10px 30px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(22px) saturate(1.05);
+}
+
+.glass-hover {
+  transition: border-color 0.25s ease, background 0.25s ease;
+}
+.glass-hover:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.032);
+}
+
+.label {
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(231, 233, 236, 0.34);
+  font-weight: 600;
+}
+
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.scroll-thin {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+.scroll-thin::-webkit-scrollbar {
+  width: 6px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+.scroll-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+button {
+  cursor: pointer;
+}
