@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { fmtBytes, fmtUptime, purgeStandbyList } from "./api";
+import { fmtBytes, fmtRate, fmtUptime, purgeStandbyList } from "./api";
 import type { DriveHealth, Snapshot } from "./types";
-import { Bar, Card, Ring } from "./components/primitives";
-import { CpuCard, DisksCard, GpuCard, NetworkCard } from "./components/PerfCards";
+import { Bar, Card, CoreHeatmap, Gauge, Ring, Sparkline } from "./components/primitives";
+import { DisksCard, NetworkCard } from "./components/PerfCards";
 import { HealthCard } from "./components/HealthCard";
 import { ProcessesCard } from "./components/ProcessesCard";
 import { CommandCard } from "./components/CommandCard";
@@ -17,9 +17,9 @@ interface Hist {
 
 function StatTile({ k, v, sub }: { k: string; v: string; sub?: string }) {
   return (
-    <div className="rounded-xl border border-white/[0.05] bg-white/[0.015] p-3">
+    <div className="rounded-xl border border-white/[0.05] bg-white/[0.012] p-3">
       <div className="label">{k}</div>
-      <div className="num mt-1 text-lg font-semibold text-white/90">{v}</div>
+      <div className="num mt-1 text-lg font-light text-white/90">{v}</div>
       {sub && <div className="num text-[10px] text-white/35">{sub}</div>}
     </div>
   );
@@ -27,17 +27,95 @@ function StatTile({ k, v, sub }: { k: string; v: string; sub?: string }) {
 
 export function StatsPage({ snap, hist }: { snap: Snapshot; hist: Hist }) {
   const memPct = snap.mem.total ? (snap.mem.used / snap.mem.total) * 100 : 0;
+  const gpu = snap.gpu;
+  const net = snap.nets[0];
+  const topProc = snap.procs[0];
   return (
     <div className="grid grid-cols-12 gap-3">
-      <CpuCard snap={snap} history={hist.cpu} className="col-span-12 lg:col-span-7" />
-      <GpuCard snap={snap} history={hist.gpu} className="col-span-12 sm:col-span-6 lg:col-span-5" />
-      <NetworkCard snap={snap} rxHist={hist.rx} txHist={hist.tx} className="col-span-12 sm:col-span-6 lg:col-span-5" />
-      <Card title="System" className="col-span-12 lg:col-span-7" delay={0.14}>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      {/* hero gauges */}
+      <Card title="CPU" className="col-span-12 sm:col-span-4" delay={0.02}
+        right={<span className="num truncate text-[10px] text-white/25">{snap.cpu.name}</span>}>
+        <Gauge
+          pct={snap.cpu.usage}
+          value={snap.cpu.usage.toFixed(0)}
+          unit="%"
+          label="load"
+          sub={`${(snap.cpu.freq_mhz / 1000).toFixed(2)} GHz · ${snap.cpu.cores.length} threads`}
+        />
+      </Card>
+      <Card title="Memory" className="col-span-12 sm:col-span-4" delay={0.05}>
+        <Gauge
+          pct={memPct}
+          color="#e7e9ec"
+          value={memPct.toFixed(0)}
+          unit="%"
+          label="in use"
+          sub={`${fmtBytes(snap.mem.used)} / ${fmtBytes(snap.mem.total)}`}
+        />
+      </Card>
+      <Card title="GPU" className="col-span-12 sm:col-span-4" delay={0.08}
+        right={gpu && <span className="num truncate text-[10px] text-white/25">{gpu.name}</span>}>
+        {gpu && gpu.usage != null ? (
+          <Gauge
+            pct={gpu.usage}
+            color="#7dd3a8"
+            value={String(gpu.usage)}
+            unit="%"
+            label="load"
+            sub={[
+              gpu.temp_c != null ? `${gpu.temp_c}°C` : null,
+              gpu.power_w != null ? `${gpu.power_w.toFixed(0)} W` : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          />
+        ) : (
+          <div className="flex h-full min-h-32 items-center justify-center text-[12px] text-white/25">
+            no GPU telemetry
+          </div>
+        )}
+      </Card>
+
+      {/* cpu history + cores */}
+      <Card title="CPU History" className="col-span-12 lg:col-span-8" delay={0.11}
+        right={<span className="label">90s</span>}>
+        <Sparkline data={hist.cpu} max={100} height={128} grid dot />
+      </Card>
+      <Card title="Cores" className="col-span-12 lg:col-span-4" delay={0.14}
+        right={<span className="num text-[10px] text-white/25">{snap.cpu.cores.length} threads</span>}>
+        <CoreHeatmap cores={snap.cpu.cores} />
+      </Card>
+
+      {/* network + system */}
+      <Card title="Network" className="col-span-12 lg:col-span-8" delay={0.17}
+        right={net && <span className="num text-[10px] text-white/25">{net.name}</span>}>
+        {net ? (
+          <>
+            <div className="relative h-[88px]">
+              <div className="absolute inset-0">
+                <Sparkline data={hist.rx} height={88} grid />
+              </div>
+              <div className="absolute inset-0">
+                <Sparkline data={hist.tx} color="#7dd3a8" height={88} fillOpacity={0.12} />
+              </div>
+            </div>
+            <div className="num mt-2 flex items-center justify-between text-[11px]">
+              <span className="text-accent">↓ {fmtRate(net.rx_rate)}</span>
+              <span className="text-white/25">Σ {fmtBytes(net.rx_total + net.tx_total)}</span>
+              <span className="text-up">↑ {fmtRate(net.tx_rate)}</span>
+            </div>
+          </>
+        ) : (
+          <div className="text-[12px] text-white/25">no interfaces</div>
+        )}
+      </Card>
+      <Card title="System" className="col-span-12 lg:col-span-4" delay={0.2}>
+        <div className="grid grid-cols-1 gap-2">
           <StatTile k="uptime" v={fmtUptime(snap.uptime)} />
-          <StatTile k="processes" v={String(snap.proc_count)} />
-          <StatTile k="cpu load" v={`${snap.cpu.usage.toFixed(0)}%`} sub={`${snap.cpu.cores.length} threads`} />
-          <StatTile k="memory" v={`${memPct.toFixed(0)}%`} sub={`${fmtBytes(snap.mem.used)} used`} />
+          <StatTile k="processes" v={String(snap.proc_count)}
+            sub={topProc ? `top: ${topProc.name} ${topProc.cpu.toFixed(0)}%` : undefined} />
+          <StatTile k="pagefile" v={snap.mem.swap_total ? `${((snap.mem.swap_used / snap.mem.swap_total) * 100).toFixed(0)}%` : "—"}
+            sub={snap.mem.swap_total ? `${fmtBytes(snap.mem.swap_used)} / ${fmtBytes(snap.mem.swap_total)}` : undefined} />
         </div>
       </Card>
     </div>

@@ -20,8 +20,10 @@ Near-black (`#030405`) frosted-glass panels, hairline borders, monochrome type w
 
 ## Download
 
-Grab the latest installer from the [**Releases**](../../releases) page and run it. Windows only.
+Grab the latest **`.msi`** installer from the [**Releases**](../../releases) page and run it. Windows only.
 
+> **Use the `.msi`.** The `-setup.exe` is unsigned and antivirus/SmartScreen frequently blocks it silently; the MSI installs cleanly.
+>
 > Sentry requests administrator rights on launch — S.M.A.R.T. data and some sensors are inaccessible without elevation.
 
 ## Tech

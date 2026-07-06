@@ -23,7 +23,6 @@ pub struct CpuInfo {
     pub usage: f32,
     pub freq_mhz: u64,
     pub cores: Vec<CoreStat>,
-    pub temp_c: Option<f32>,
 }
 
 #[derive(Serialize)]
@@ -90,7 +89,7 @@ pub struct MonitorInner {
     networks: Networks,
     disks: Disks,
     last_poll: Instant,
-    thermal_ok: bool,
+    perf_ok: bool,
 }
 
 pub struct MonitorState(pub Mutex<MonitorInner>);
@@ -102,29 +101,30 @@ impl Default for MonitorState {
             networks: Networks::new_with_refreshed_list(),
             disks: Disks::new_with_refreshed_list(),
             last_poll: Instant::now(),
-            thermal_ok: true,
+            perf_ok: true,
         }))
     }
 }
 
-fn cpu_temp_wmi() -> Option<f32> {
+// NOTE: no CPU temperature. The only driverless source on Windows
+// (MSAcpi_ThermalZoneTemperature) reports a stale ACPI zone value on most
+// machines — showing it would be wrong data. Drive temps come from S.M.A.R.T.
+
+/// Live processor performance in % of base clock (can exceed 100 under turbo).
+/// Same counter Task Manager uses for its "Speed" readout.
+fn cpu_perf_pct() -> Option<f64> {
     let com = wmi::COMLibrary::new().ok()?;
-    let conn = wmi::WMIConnection::with_namespace_path("root\\wmi", com).ok()?;
+    let conn = wmi::WMIConnection::new(com).ok()?;
     let rows: Vec<std::collections::HashMap<String, wmi::Variant>> = conn
-        .raw_query("SELECT CurrentTemperature FROM MSAcpi_ThermalZoneTemperature")
+        .raw_query(
+            "SELECT PercentProcessorPerformance FROM Win32_PerfFormattedData_Counters_ProcessorInformation WHERE Name='_Total'",
+        )
         .ok()?;
-    let mut max_t: Option<f32> = None;
-    for row in rows {
-        if let Some(v) = row.get("CurrentTemperature") {
-            if let Some(raw) = crate::smart::variant_u64(v) {
-                let c = raw as f32 / 10.0 - 273.15;
-                if c > 0.0 && c < 120.0 {
-                    max_t = Some(max_t.map_or(c, |m: f32| m.max(c)));
-                }
-            }
-        }
-    }
-    max_t
+    rows.first()
+        .and_then(|r| r.get("PercentProcessorPerformance"))
+        .and_then(crate::smart::variant_u64)
+        .filter(|v| *v > 0)
+        .map(|v| v as f64)
 }
 
 fn gpu_info() -> Option<GpuInfo> {
@@ -164,14 +164,19 @@ pub fn build_snapshot(state: &MonitorState) -> Snapshot {
         })
         .collect();
 
-    let temp_c = if inner.thermal_ok {
-        let t = cpu_temp_wmi();
-        if t.is_none() {
-            inner.thermal_ok = false;
+    // sysinfo reports the BASE clock on Windows; scale by the live
+    // performance counter to get the actual current speed (turbo included).
+    let base_mhz = inner.sys.cpus().first().map(|c| c.frequency()).unwrap_or(0);
+    let live_mhz = if inner.perf_ok {
+        match cpu_perf_pct() {
+            Some(pct) => (base_mhz as f64 * pct / 100.0) as u64,
+            None => {
+                inner.perf_ok = false;
+                base_mhz
+            }
         }
-        t
     } else {
-        None
+        base_mhz
     };
 
     let cpu = CpuInfo {
@@ -182,9 +187,8 @@ pub fn build_snapshot(state: &MonitorState) -> Snapshot {
             .map(|c| c.brand().trim().to_string())
             .unwrap_or_default(),
         usage: inner.sys.global_cpu_usage(),
-        freq_mhz: inner.sys.cpus().first().map(|c| c.frequency()).unwrap_or(0),
+        freq_mhz: live_mhz,
         cores,
-        temp_c,
     };
 
     let mem = MemInfo {

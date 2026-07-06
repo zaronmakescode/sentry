@@ -27,7 +27,6 @@ export function CpuCard({
           </div>
           <div className="num mt-1 text-[11px] text-white/40">
             {(cpu.freq_mhz / 1000).toFixed(2)} GHz · {cpu.cores.length} threads
-            {cpu.temp_c != null && ` · ${cpu.temp_c.toFixed(0)}°C`}
           </div>
         </div>
         <div className="min-w-0 flex-1">

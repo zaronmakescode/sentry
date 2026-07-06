@@ -8,7 +8,6 @@ export interface CpuInfo {
   usage: number;
   freq_mhz: number;
   cores: CoreStat[];
-  temp_c: number | null;
 }
 
 export interface MemInfo {
