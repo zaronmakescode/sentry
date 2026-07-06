@@ -4,14 +4,7 @@ import { fmtUptime, getDriveHealth, getSnapshot } from "./api";
 import type { DriveHealth, Snapshot } from "./types";
 import { Nav, type PageId } from "./components/Nav";
 import { TitleBar } from "./components/TitleBar";
-import {
-  ActionsPage,
-  IntelPage,
-  MemoryPage,
-  ProcessesPage,
-  StatsPage,
-  StoragePage,
-} from "./pages";
+import { ActionsPage, DrivesPage, OverviewPage } from "./pages";
 
 const HISTORY = 60;
 
@@ -21,7 +14,7 @@ function push(arr: number[], v: number): number[] {
 }
 
 export default function App() {
-  const [page, setPage] = useState<PageId>("stats");
+  const [page, setPage] = useState<PageId>("overview");
   const [snap, setSnap] = useState<Snapshot | null>(null);
   const [drives, setDrives] = useState<DriveHealth[] | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -78,18 +71,12 @@ export default function App() {
   const renderPage = () => {
     if (!snap) return null;
     switch (page) {
-      case "stats":
-        return <StatsPage snap={snap} hist={hist} />;
-      case "memory":
-        return <MemoryPage snap={snap} notify={notify} />;
-      case "storage":
-        return <StoragePage snap={snap} drives={drives} />;
-      case "processes":
-        return <ProcessesPage snap={snap} notify={notify} />;
+      case "overview":
+        return <OverviewPage snap={snap} hist={hist} drives={drives} notify={notify} />;
+      case "drives":
+        return <DrivesPage snap={snap} drives={drives} />;
       case "actions":
         return <ActionsPage notify={notify} />;
-      case "intel":
-        return <IntelPage snap={snap} hist={hist} />;
     }
   };
 

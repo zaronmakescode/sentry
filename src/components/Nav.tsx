@@ -1,51 +1,31 @@
 import { motion } from "framer-motion";
 import type { ReactNode } from "react";
 
-export type PageId = "stats" | "memory" | "storage" | "processes" | "actions" | "intel";
+export type PageId = "overview" | "drives" | "actions";
 
 const ICONS: Record<PageId, ReactNode> = {
-  stats: (
+  overview: (
     <path d="M3 13.5 L8 8.5 L11.5 12 L17 5.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
   ),
-  memory: (
-    <g fill="none" stroke="currentColor" strokeWidth="1.5">
-      <rect x="4" y="6" width="12" height="8" rx="1.5" />
-      <path d="M7 6 V3.5 M10 6 V3.5 M13 6 V3.5 M7 14 v2.5 M10 14 v2.5 M13 14 v2.5" strokeLinecap="round" />
-    </g>
-  ),
-  storage: (
+  drives: (
     <g fill="none" stroke="currentColor" strokeWidth="1.5">
       <ellipse cx="10" cy="5.5" rx="6" ry="2.4" />
       <path d="M4 5.5 V14.5 C4 15.8 6.7 16.9 10 16.9 C13.3 16.9 16 15.8 16 14.5 V5.5" />
       <path d="M4 10 C4 11.3 6.7 12.4 10 12.4 C13.3 12.4 16 11.3 16 10" />
     </g>
   ),
-  processes: (
-    <g fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-      <path d="M4 6 H16 M4 10 H16 M4 14 H12" />
-    </g>
-  ),
   actions: (
     <path d="M9 2 L4 11 H9 L8 18 L16 8 H10 Z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-  ),
-  intel: (
-    <g fill="none" stroke="currentColor" strokeWidth="1.5">
-      <circle cx="10" cy="10" r="6.5" />
-      <path d="M3.5 10 H16.5 M10 3.5 C12 6 12 14 10 16.5 C8 14 8 6 10 3.5" />
-    </g>
   ),
 };
 
 const LABELS: Record<PageId, string> = {
-  stats: "Stats",
-  memory: "Memory",
-  storage: "Storage",
-  processes: "Processes",
+  overview: "Overview",
+  drives: "Drives",
   actions: "Actions",
-  intel: "Intel",
 };
 
-const ORDER: PageId[] = ["stats", "memory", "storage", "processes", "actions", "intel"];
+const ORDER: PageId[] = ["overview", "drives", "actions"];
 
 export function Nav({
   active,

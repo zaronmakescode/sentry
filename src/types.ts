@@ -113,4 +113,7 @@ export interface WifiInfo {
 export interface BatteryInfo {
   charge_pct: number;
   status: string;
+  health_pct: number | null;
+  full_capacity_mwh: number | null;
+  design_capacity_mwh: number | null;
 }

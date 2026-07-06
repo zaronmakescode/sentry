@@ -328,6 +328,36 @@ pub async fn ping_host(host: String) -> Result<Option<u32>, String> {
 pub struct BatteryInfo {
     pub charge_pct: u8,
     pub status: String,
+    /// Real wear-based health: FullChargedCapacity / DesignedCapacity.
+    pub health_pct: Option<u8>,
+    pub full_capacity_mwh: Option<u64>,
+    pub design_capacity_mwh: Option<u64>,
+}
+
+fn battery_capacities() -> (Option<u64>, Option<u64>) {
+    let Ok(com) = COMLibrary::new() else {
+        return (None, None);
+    };
+    let Ok(conn) = WMIConnection::with_namespace_path("root\\wmi", com) else {
+        return (None, None);
+    };
+    let full: Vec<HashMap<String, Variant>> = conn
+        .raw_query("SELECT FullChargedCapacity FROM BatteryFullChargedCapacity")
+        .unwrap_or_default();
+    let design: Vec<HashMap<String, Variant>> = conn
+        .raw_query("SELECT DesignedCapacity FROM BatteryStaticData")
+        .unwrap_or_default();
+    (
+        full.first()
+            .and_then(|r| r.get("FullChargedCapacity"))
+            .and_then(crate::smart::variant_u64)
+            .filter(|v| *v > 0),
+        design
+            .first()
+            .and_then(|r| r.get("DesignedCapacity"))
+            .and_then(crate::smart::variant_u64)
+            .filter(|v| *v > 0),
+    )
 }
 
 #[tauri::command]
@@ -358,9 +388,17 @@ pub async fn get_battery() -> Result<Option<BatteryInfo>, String> {
             6..=9 => "Charging",
             _ => "Unknown",
         };
+        let (full, design) = battery_capacities();
+        let health = match (full, design) {
+            (Some(f), Some(d)) => Some(((f as f64 / d as f64) * 100.0).round().min(100.0) as u8),
+            _ => None,
+        };
         Ok(Some(BatteryInfo {
             charge_pct: charge.min(100),
             status: status.to_string(),
+            health_pct: health,
+            full_capacity_mwh: full,
+            design_capacity_mwh: design,
         }))
     })
     .await

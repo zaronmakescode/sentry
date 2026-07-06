@@ -1,6 +1,6 @@
 [package]
 name = "sentry"
-version = "0.1.1"
+version = "0.1.2"
 description = "Sentry — system intelligence dashboard"
 authors = ["zaron"]
 edition = "2021"
